@@ -1,0 +1,16 @@
+// ======================== settings.json ========================
+{
+    "taskExplorer.enableMake": false,
+    "search.exclude": {
+      "**/build": true
+    },
+    "files.associations": {
+      "ds3231.h": "c",
+      "ds18x20.h": "c",
+      "esp_idf_lib_helpers.h": "c",
+      "string.h": "c",
+      "freertos.h": "c",
+      "task.h": "c",
+      "cgiwifi.h": "c"
+    }
+  }

@@ -51,9 +51,9 @@ CgiStatus ICACHE_FLASH_ATTR tplLed(HttpdConnData *connData, char *token, void **
 	strcpy(buff, "Unknown");
 	if (strcmp(token, "ledstate")==0) {
 		if (currLedState) {
-			strcpy(buff, "on");
+			strcpy(buff, "ON");
 		} else {
-			strcpy(buff, "off");
+			strcpy(buff, "OFF");
 		}
 	}
 	if (strcmp(token, "ledgpio")==0) {

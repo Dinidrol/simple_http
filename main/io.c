@@ -176,6 +176,7 @@ PAUSE_END --> INIT : t > tEND
 
 static void resetBtnTimerCb(void *arg) {
 	static int resetCnt=0;
+	//printf("Hello from ISR! \n");
 	if (gpio_get_level(BTN_GPIO)==0) {
 		// button is depressed
 		resetCnt++;

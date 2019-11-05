@@ -40,6 +40,8 @@ the server, including WiFi connection management capabilities, some IO etc.
 #include "freertos/semphr.h"
 #include "freertos/queue.h"
 
+#include <ds18x20.h>
+
 #ifdef ESP32
 #include "freertos/event_groups.h"
 #include "esp_log.h"
@@ -175,7 +177,7 @@ HttpdBuiltInUrl builtInUrls[] = {
 
 	//Routines to make the /wifi URL and everything beneath it work.
 	//Enable the line below to protect the WiFi configuration with an username/password combo.
-	//	{"/wifi/*", authBasic, myPassFn},
+	{"/wifi/*", authBasic, myPassFn},
 
 	ROUTE_REDIRECT("/wifi", "/wifi/wifi.tpl"),
 	ROUTE_REDIRECT("/wifi/", "/wifi/wifi.tpl"),
