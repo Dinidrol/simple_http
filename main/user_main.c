@@ -73,6 +73,7 @@ char my_hostname[16] = "esphttpd";
 static char connectionMemory[sizeof(RtosConnType) * MAX_CONNECTIONS];
 static HttpdFreertosInstance httpdFreertosInstance;
 
+
 //Function that tells the authentication system what users/passwords live on the system.
 //This is disabled in the default build; if you want to try it, enable the authBasic line in
 //the builtInUrls below.
@@ -90,9 +91,12 @@ int myPassFn(HttpdConnData *connData, int no, char *user, int userLen, char *pas
 	return 0;
 }
 
+//ds18b20 function read
+
+
 
 //Broadcast the uptime in seconds every second over connected websockets
-static void websocketBcast(void *arg) {
+/*static void websocketBcast(void *arg) {
 	static int ctr=0;
 	char buff[128];
 	while(1) {
@@ -104,7 +108,7 @@ static void websocketBcast(void *arg) {
 
 		vTaskDelay(1000/portTICK_RATE_MS);
 	}
-}
+}*/
 
 //On reception of a message, send "You sent: " plus whatever the other side sent
 static void myWebsocketRecv(Websock *ws, char *data, int len, int flags) {
@@ -113,6 +117,7 @@ static void myWebsocketRecv(Websock *ws, char *data, int len, int flags) {
 	sprintf(buff, "You sent: ");
 	for (i=0; i<len; i++) buff[i+10]=data[i];
 	buff[i+10]=0;
+	printf(buff);
 	cgiWebsocketSend(&httpdFreertosInstance.httpdInstance,
 	                 ws, buff, strlen(buff), WEBSOCK_FLAG_NONE);
 }
@@ -163,9 +168,14 @@ HttpdBuiltInUrl builtInUrls[] = {
 	ROUTE_CGI_ARG("*", cgiRedirectApClientToHostname, "esp8266.nonet"),
 	ROUTE_REDIRECT("/", "/index.tpl"),
 
-	ROUTE_TPL("/led.tpl", tplLed),
+	
 	ROUTE_TPL("/index.tpl", tplCounter),
+
+	ROUTE_TPL("/led.tpl", tplLed),
 	ROUTE_CGI("/led.cgi", cgiLed),
+
+	ROUTE_REDIRECT("/graph", "/graph/graph.html"),
+	ROUTE_CGI("/graph/graphinfo.json", GraphInfo),
 
 	ROUTE_REDIRECT("/flash", "/flash/index.html"),
 	ROUTE_REDIRECT("/flash/", "/flash/index.html"),
@@ -201,6 +211,11 @@ HttpdBuiltInUrl builtInUrls[] = {
 
 	ROUTE_END()
 };
+
+static void sendDataToWeb(void *arg)
+{
+	//printf("Hello From ISR \n");
+}
 
 
 #ifdef ESP32
@@ -368,7 +383,7 @@ void user_init(void) {
 	uart_div_modify(0, UART_CLK_FREQ / 115200);
 #endif
 
-	ioInit();
+	//ioInit();
 // FIXME: Re-enable this when capdns is fixed for esp32
 //	captdnsInit();
 
@@ -383,11 +398,21 @@ void user_init(void) {
 	                  connectionMemory,
 	                  MAX_CONNECTIONS,
 	                  HTTPD_FLAG_NONE);
+
 	httpdFreertosStart(&httpdFreertosInstance);
 
 	init_wifi(true); // Supply false for STA mode
 
-	xTaskCreate(websocketBcast, "wsbcast", 3000, NULL, 3, NULL);
+	TimerHandle_t read = xTimerCreate(
+		"readDs",
+		( 100 / portTICK_RATE_MS ),
+		pdTRUE,
+		0,
+		sendDataToWeb
+	); 
+
+	//xTaskCreate(ds18x20_readC, "wsbcast", 3000, NULL, 3, NULL);
+	xTimerStart(read, 0);
 
 	printf("\nReady\n");
 }

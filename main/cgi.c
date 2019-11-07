@@ -14,6 +14,7 @@ flash as a binary. Also handles the hit counter on the main page.
 
 
 #include <libesphttpd/esp.h>
+#include "cJSON.h"
 #include "cgi.h"
 #include "io.h"
 
@@ -75,5 +76,40 @@ CgiStatus ICACHE_FLASH_ATTR tplCounter(HttpdConnData *connData, char *token, voi
 		sprintf(buff, "%d", hitCounter);
 	}
 	httpdSend(connData, buff, -1);
+	return HTTPD_CGI_DONE;
+}
+
+static void cgiJsonResponseCommon(HttpdConnData *connData, cJSON *jsroot){
+	char *json_string = NULL;
+
+	//// Generate the header
+	//We want the header to start with HTTP code 200, which means the document is found.
+	httpdStartResponse(connData, 200);
+	httpdHeader(connData, "Cache-Control", "no-store, must-revalidate, no-cache, max-age=0");
+	httpdHeader(connData, "Expires", "Mon, 01 Jan 1990 00:00:00 GMT");  //  This one might be redundant, since modern browsers look for "Cache-Control".
+	httpdHeader(connData, "Content-Type", "application/json; charset=utf-8"); //We are going to send some JSON.
+	httpdEndHeaders(connData);
+	json_string = cJSON_Print(jsroot);
+    if (json_string)
+    {
+    	httpdSend(connData, json_string, -1);
+        cJSON_free(json_string);
+    }
+    cJSON_Delete(jsroot);
+}
+//Graph
+CgiStatus ICACHE_FLASH_ATTR GraphInfo(HttpdConnData *connData)
+{
+	char buff[128]= "Hello world!";
+	if (connData->isConnectionClosed)
+	{ 
+		return HTTPD_CGI_DONE;
+	}
+
+	cJSON *jsroot = cJSON_CreateObject();
+
+	cJSON_AddStringToObject(jsroot, "temp", "18.23");
+	cgiJsonResponseCommon(connData, jsroot);
+
 	return HTTPD_CGI_DONE;
 }
