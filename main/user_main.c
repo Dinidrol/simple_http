@@ -17,11 +17,11 @@ the server, including WiFi connection management capabilities, some IO etc.
 #include "libesphttpd/httpd.h"
 #include "io.h"
 
-#ifdef CONFIG_ESPHTTPD_USE_ESPFS
+
 #include "espfs.h"
 #include "espfs_image.h"
 #include "libesphttpd/httpd-espfs.h"
-#endif // CONFIG_ESPHTTPD_USE_ESPFS
+ // CONFIG_ESPHTTPD_USE_ESPFS
 
 #include "cgi.h"
 #include "libesphttpd/cgiwifi.h"
@@ -42,7 +42,7 @@ the server, including WiFi connection management capabilities, some IO etc.
 
 #include <ds18x20.h>
 
-#ifdef ESP32
+
 #include "freertos/event_groups.h"
 #include "esp_log.h"
 
@@ -63,12 +63,16 @@ char my_hostname[16] = "esphttpd";
 */
 #define EXAMPLE_WIFI_SSID      CONFIG_EXAMPLE_WIFI_SSID
 #define EXAMPLE_WIFI_PASS      CONFIG_EXAMPLE_WIFI_PASSWORD
-#endif
+
 
 #define TAG "user_main"
 
 #define LISTEN_PORT     80u
 #define MAX_CONNECTIONS 32u
+
+static portMUX_TYPE mux = portMUX_INITIALIZER_UNLOCKED;
+#define PORT_ENTER_CRITICAL portENTER_CRITICAL(&mux)
+#define PORT_EXIT_CRITICAL  portEXIT_CRITICAL(&mux)
 
 static char connectionMemory[sizeof(RtosConnType) * MAX_CONNECTIONS];
 static HttpdFreertosInstance httpdFreertosInstance;
@@ -212,14 +216,6 @@ HttpdBuiltInUrl builtInUrls[] = {
 	ROUTE_END()
 };
 
-static void sendDataToWeb(void *arg)
-{
-	//printf("Hello From ISR \n");
-}
-
-
-#ifdef ESP32
-
 
 static esp_err_t app_event_handler(void *ctx, system_event_t *event)
 {
@@ -314,9 +310,9 @@ static esp_err_t app_event_handler(void *ctx, system_event_t *event)
 	return ESP_OK;
 }
 
-
 //Simple task to connect to an access point
 void init_wifi(bool modeAP) {
+	printf("Task run in core: %d\n", xPortGetCoreID());
 	esp_err_t result;
 
 	result = nvs_flash_init();
@@ -370,26 +366,36 @@ void init_wifi(bool modeAP) {
 
 	ESP_ERROR_CHECK( esp_wifi_start() );
 }
-#endif
+
+ void read_temperature(void *pvParametr)
+{
+	//ds18x20_addr_t addrs[8];
+    float temps;
+    //int sensor_count;
+
+	
+		//sensor_count = ds18x20_scan_devices(15, addrs, 8);
+	ESP_ERROR_CHECK(ds18x20_measure(15, ds18x20_ANY, true));
+	//ESP_ERROR_CHECK(ds18x20_read_temperature(15,ds18x20_ANY, &temps));
+	//printf("Sensor reports %f deg C\n", temps);
+		//vTaskDelay(5000/portTICK_RATE_MS);
+	
+}
 
 //Main routine. Initialize stdout, the I/O, filesystem and the webserver and we're done.
-#if ESP32
 void app_main(void) {
-#else
-void user_init(void) {
-#endif
 
-#ifndef ESP32
-	uart_div_modify(0, UART_CLK_FREQ / 115200);
-#endif
+	printf("Task run in core: %d\n", xPortGetCoreID());
 
-	//ioInit();
-// FIXME: Re-enable this when capdns is fixed for esp32
-//	captdnsInit();
 
-#ifdef CONFIG_ESPHTTPD_USE_ESPFS
-	espFsInit((void*)(image_espfs_start));
-#endif // CONFIG_ESPHTTPD_USE_ESPFS
+	//uart_div_modify(0, UART_CLK_FREQ / 115200);
+
+
+	//	ioInit();
+	//	FIXME: Re-enable this when capdns is fixed for esp32
+	//	captdnsInit();
+
+	espFsInit((void*)(image_espfs_start)); // CONFIG_ESPHTTPD_USE_ESPFS
 
 	tcpip_adapter_init();
 	httpdFreertosInit(&httpdFreertosInstance,
@@ -400,19 +406,14 @@ void user_init(void) {
 	                  HTTPD_FLAG_NONE);
 
 	httpdFreertosStart(&httpdFreertosInstance);
-
 	init_wifi(true); // Supply false for STA mode
-
-	TimerHandle_t read = xTimerCreate(
-		"readDs",
-		( 100 / portTICK_RATE_MS ),
-		pdTRUE,
-		0,
-		sendDataToWeb
-	); 
-
-	//xTaskCreate(ds18x20_readC, "wsbcast", 3000, NULL, 3, NULL);
-	xTimerStart(read, 0);
-
 	printf("\nReady\n");
+
+	TimerHandle_t resetBtnTimer = xTimerCreate(    "rstTmr",       // Just a text name, not used by the kernel.
+			( 5000 / portTICK_RATE_MS ),   // The timer period in ticks.
+			pdTRUE,        // The timers will auto-reload themselves when they expire.
+			0,  // Assign each timer a unique id equal to its array index.
+			read_temperature // Each timer calls the same callback when it expires.
+	);
+	xTimerStart( resetBtnTimer, 0 );
 }

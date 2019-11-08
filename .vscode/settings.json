@@ -11,6 +11,10 @@
       "string.h": "c",
       "freertos.h": "c",
       "task.h": "c",
-      "cgiwifi.h": "c"
+      "cgiwifi.h": "c",
+      "semphr.h": "c",
+      "route.h": "c",
+      "esp_heap_trace.h": "c",
+      "onewire.h": "c"
     }
   }
