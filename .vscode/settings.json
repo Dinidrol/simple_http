@@ -15,6 +15,16 @@
       "semphr.h": "c",
       "route.h": "c",
       "esp_heap_trace.h": "c",
-      "onewire.h": "c"
+      "onewire.h": "c",
+      "owb_rmt.h": "c",
+      "owb.h": "c",
+      "esp.h": "c",
+      "httpd.h": "c",
+      "httpd-espfs.h": "c",
+      "cgiflash.h": "c",
+      "auth.h": "c",
+      "captdns.h": "c",
+      "httpd-freertos.h": "c",
+      "esp_event.h": "c"
     }
   }
